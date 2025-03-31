@@ -6,6 +6,7 @@ import ProductList from "./components/ProductList";
 import ProductDetail from "./components/ProductDetail";
 import EmptyState from "./components/EmptyState";
 import SortFilterControls from "./components/SortFilterControls";
+import config from "./config";
 
 function App() {
   const [products, setProducts] = useState([]);
@@ -104,7 +105,7 @@ function App() {
 
   useEffect(() => {
     // Only fetch search history on initial load
-    fetch("http://localhost:5000/api/session", {
+    fetch(`${config.API_URL}/session`, {
       credentials: "include",
     })
       .then((res) => res.json())
@@ -119,7 +120,7 @@ function App() {
       setLoading(true);
       setHasSearched(true);
 
-      const response = await fetch("http://localhost:5000/api/search", {
+      const response = await fetch(`${config.API_URL}/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
