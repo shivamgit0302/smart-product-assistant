@@ -18,8 +18,8 @@ app.use(
     origin:
       process.env.NODE_ENV === "production"
         ? [
-            "https://smart-product-assistant-delta.vercel.app",
-            "https://www.smart-product-assistant-delta.vercel.app",
+            "https://frontend-smart-product-assistant.vercel.app",
+            "https://www.frontend-smart-product-assistant.vercel.app",
           ]
         : "http://localhost:3000",
     credentials: true,
