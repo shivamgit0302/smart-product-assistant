@@ -18,8 +18,8 @@ app.use(
     origin:
       process.env.NODE_ENV === "production"
         ? [
-            "https://your-frontend-url.vercel.app",
-            "https://www.your-domain.com",
+            "https://smart-product-assistant-delta.vercel.app",
+            "https://www.smart-product-assistant-delta.vercel.app",
           ]
         : "http://localhost:3000",
     credentials: true,
@@ -59,3 +59,5 @@ mongoose
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+export default app;
