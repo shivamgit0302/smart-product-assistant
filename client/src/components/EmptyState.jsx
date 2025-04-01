@@ -1,41 +1,45 @@
+"use client";
+
+import { useAuth } from "../contexts/AuthContext";
+
 function EmptyState() {
+  const { currentUser } = useAuth();
+
   return (
-    <div className="py-16 text-center">
-      <svg
-        className="mx-auto h-20 w-20 text-primary-300"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.5}
-          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-        />
-      </svg>
-      <h3 className="mt-6 text-2xl font-medium text-gray-900">
-        Describe what you're looking for
-      </h3>
-      <p className="mt-3 text-gray-500 text-lg max-w-lg mx-auto">
-        Our AI assistant can understand natural language. Try searching for
-        something like:
-      </p>
-      <div className="mt-6 flex flex-wrap gap-3 justify-center max-w-2xl mx-auto">
-        <div className="bg-primary-50 text-primary-700 px-4 py-2 rounded-lg text-sm">
-          "A lightweight laptop for college under $1000"
-        </div>
-        <div className="bg-primary-50 text-primary-700 px-4 py-2 rounded-lg text-sm">
-          "Noise-cancelling headphones for travel"
-        </div>
-        <div className="bg-primary-50 text-primary-700 px-4 py-2 rounded-lg text-sm">
-          "Gift for a coffee enthusiast"
-        </div>
-        <div className="bg-primary-50 text-primary-700 px-4 py-2 rounded-lg text-sm">
-          "Waterproof hiking boots with good ankle support"
-        </div>
+    <div className="text-center py-12">
+      <div className="mx-auto h-24 w-24 text-gray-400">
+        <svg
+          className="h-full w-full"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+          />
+        </svg>
       </div>
+      <h3 className="mt-2 text-lg font-medium text-gray-900">
+        Find the perfect products
+      </h3>
+      <p className="mt-1 text-sm text-gray-500">
+        Use the search bar above to describe what you're looking for.
+      </p>
+
+      {!currentUser && (
+        <div className="mt-6 inline-block bg-blue-50 border border-blue-200 rounded-lg p-4 text-blue-800 text-sm">
+          <p className="font-medium mb-1">💡 Create an account or log in to:</p>
+          <ul className="text-left list-disc pl-5 text-blue-700">
+            <li>Save your search history</li>
+            <li>Get faster results with cached searches</li>
+            <li>Track your favorite products</li>
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import express from "express";
 import openai from "../utils/openAIClient.js";
 import Product from "../models/Product.js";
+import User from "../models/User.js";
+import auth from "../middleware/auth.js";
 
 const router = express.Router();
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour cache
@@ -212,57 +214,61 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "Search query is required" });
     }
 
-    // Initialize session structures if they don't exist
-    if (!req.session.searchHistory) {
-      req.session.searchHistory = [];
-    }
-    if (!req.session.searchCache) {
-      req.session.searchCache = {};
-    }
+    const currentTime = Date.now();
 
-    // Check if we have a cached result for this query that isn't too old
-    const cachedResult = req.session.searchCache[query];
-    const currentTime = new Date().getTime();
+    // Only check cache for logged-in users
+    let cachedResult = null;
 
-    if (cachedResult && currentTime - cachedResult.timestamp < CACHE_TTL) {
-      console.log("Using cached search results for query:", query);
+    if (req.user) {
+      // Get fresh user document to ensure we have the latest data
+      const freshUser = await User.findById(req.user._id);
 
-      // Update the timestamp in search history for this query
-      const existingHistoryIndex = req.session.searchHistory.findIndex(
-        (item) => item.query === query
-      );
+      if (freshUser) {
+        // Check if the query exists in the cache
+        cachedResult = freshUser.searchCache && freshUser.searchCache[query];
 
-      if (existingHistoryIndex !== -1) {
-        // Move to top of history
-        const existingItem = req.session.searchHistory.splice(
-          existingHistoryIndex,
-          1
-        )[0];
-        existingItem.timestamp = new Date();
-        req.session.searchHistory.unshift(existingItem);
-      } else {
-        // Add to history if somehow not there
-        req.session.searchHistory.unshift({
-          query,
-          timestamp: new Date(),
-          numResults: cachedResult.recommendations.length,
-        });
+        if (cachedResult) {
+          console.log(`Found cached result for query "${query}"`);
+          console.log(
+            `Cache timestamp: ${new Date(cachedResult.timestamp).toISOString()}`
+          );
+          console.log(`Current time: ${new Date(currentTime).toISOString()}`);
+          console.log(
+            `Cache age: ${
+              (currentTime - cachedResult.timestamp) / 1000
+            } seconds`
+          );
+
+          if (currentTime - cachedResult.timestamp < CACHE_TTL) {
+            console.log("Cache is fresh, using cached results");
+
+            // Update search history
+            updateSearchHistory(
+              req,
+              query,
+              cachedResult.recommendations.length
+            );
+
+            return res.json({
+              query,
+              aiExplanation: cachedResult.aiExplanation,
+              recommendations: cachedResult.recommendations,
+              searchHistory: req.session.searchHistory || [],
+              fromCache: true,
+            });
+          } else {
+            console.log("Cache is stale, fetching fresh results");
+          }
+        } else {
+          console.log(`No cache found for query "${query}"`);
+        }
       }
-
-      // Limit history size
-      if (req.session.searchHistory.length > 10) {
-        req.session.searchHistory = req.session.searchHistory.slice(0, 10);
-      }
-
-      // Return cached results
-      return res.json({
-        query,
-        aiExplanation: cachedResult.aiExplanation,
-        recommendations: cachedResult.recommendations,
-        searchHistory: req.session.searchHistory,
-        fromCache: true,
-      });
+    } else {
+      console.log("User not logged in, skipping cache check");
     }
+
+    // If we get here, we need to perform a new search
+    console.log("Performing new search with OpenAI");
 
     // Check if we're approaching rate limits
     if (isRateLimitApproaching()) {
@@ -272,6 +278,9 @@ router.post("/", async (req, res) => {
         query,
         products
       );
+
+      // Update search history
+      updateSearchHistory(req, query, recommendedProducts.length);
 
       return res.json({
         query,
@@ -389,51 +398,53 @@ router.post("/", async (req, res) => {
 
           let relevanceScore = 0;
           if (match && match[1]) {
-            relevanceScore = parseInt(match[1]);
+            relevanceScore = Number.parseInt(match[1]);
           }
 
           return {
             ...product.toObject(),
             relevanceScore: relevanceScore,
+            imageUrl: product.imageUrl || "",
           };
         })
         .filter((p) => p.relevanceScore > 0)
         .sort((a, b) => b.relevanceScore - a.relevanceScore);
 
-      // Cache the results
-      req.session.searchCache[query] = {
-        aiExplanation: aiResponse,
-        recommendations: processedProducts,
-        timestamp: currentTime,
-      };
-
       // Update search history
-      const existingHistoryIndex = req.session.searchHistory.findIndex(
-        (item) => item.query === query
-      );
+      updateSearchHistory(req, query, processedProducts.length);
 
-      if (existingHistoryIndex !== -1) {
-        // Update existing history item
-        req.session.searchHistory.splice(existingHistoryIndex, 1);
+      // Only update cache for logged-in users
+      if (req.user) {
+        try {
+          // Prepare cache data
+          const cacheData = {
+            aiExplanation: aiResponse,
+            timestamp: Date.now(),
+            recommendations: processedProducts.map((p) => ({
+              _id: p._id.toString(),
+              name: p.name,
+              description: p.description,
+              price: p.price,
+              category: p.category,
+              relevanceScore: p.relevanceScore,
+              imageUrl: p.imageUrl,
+            })),
+          };
+
+          // Update user's search cache
+          await auth.updateUserSearchCache(req.user._id, query, cacheData);
+        } catch (err) {
+          console.error("Failed to save search cache:", err);
+          // Continue execution even if cache saving fails
+        }
       }
 
-      // Add to the beginning of history
-      req.session.searchHistory.unshift({
-        query,
-        timestamp: new Date(),
-        numResults: processedProducts.length,
-      });
-
-      // Limit history size
-      if (req.session.searchHistory.length > 10) {
-        req.session.searchHistory = req.session.searchHistory.slice(0, 10);
-      }
-
+      // Return response
       res.json({
         query,
         aiExplanation: aiResponse,
         recommendations: processedProducts,
-        searchHistory: req.session.searchHistory,
+        searchHistory: req.session.searchHistory || [],
       });
     } catch (openaiError) {
       console.error("OpenAI API error:", openaiError);
@@ -452,23 +463,7 @@ router.post("/", async (req, res) => {
       );
 
       // Add fallback search to history
-      const existingHistoryIndex = req.session.searchHistory.findIndex(
-        (item) => item.query === query
-      );
-
-      if (existingHistoryIndex !== -1) {
-        req.session.searchHistory.splice(existingHistoryIndex, 1);
-      }
-
-      req.session.searchHistory.unshift({
-        query,
-        timestamp: new Date(),
-        numResults: recommendedProducts.length,
-      });
-
-      if (req.session.searchHistory.length > 10) {
-        req.session.searchHistory = req.session.searchHistory.slice(0, 10);
-      }
+      updateSearchHistory(req, query, recommendedProducts.length);
 
       // Create a user-friendly error message
       let userMessage = "";
@@ -499,5 +494,47 @@ router.post("/", async (req, res) => {
       .json({ message: "Error processing search query", error: error.message });
   }
 });
+
+// Helper function to update search history
+function updateSearchHistory(req, query, numResults) {
+  // Only process if user is authenticated
+  if (!req.user) return;
+
+  // Initialize searchHistory if it doesn't exist
+  if (!req.session.searchHistory) {
+    req.session.searchHistory = [];
+  }
+
+  const existingHistoryIndex = req.session.searchHistory.findIndex(
+    (item) => item.query === query
+  );
+
+  if (existingHistoryIndex !== -1) {
+    // Move existing item to top
+    const existingItem = req.session.searchHistory.splice(
+      existingHistoryIndex,
+      1
+    )[0];
+    existingItem.timestamp = new Date();
+    existingItem.numResults = numResults;
+    req.session.searchHistory.unshift(existingItem);
+  } else {
+    // Add new item at beginning
+    req.session.searchHistory.unshift({
+      query,
+      timestamp: new Date(),
+      numResults,
+    });
+  }
+
+  // Limit history size
+  if (req.session.searchHistory.length > 10) {
+    req.session.searchHistory = req.session.searchHistory.slice(0, 10);
+  }
+
+  console.log(
+    `Search history updated in memory, length: ${req.session.searchHistory.length}`
+  );
+}
 
 export default router;

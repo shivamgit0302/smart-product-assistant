@@ -7,8 +7,118 @@ import ProductDetail from "./components/ProductDetail";
 import EmptyState from "./components/EmptyState";
 import SortFilterControls from "./components/SortFilterControls";
 import config from "./config";
+import { useAuth } from "./contexts/AuthContext";
+import AuthModal from "./components/AuthModal";
+import { AuthProvider } from "./contexts/AuthContext";
 
-function App() {
+// Helper function to parse AI response
+function parseAIResponse(aiExplanation) {
+  if (!aiExplanation) return { explanation: "", products: [] };
+
+  const parts = aiExplanation.split(/PRODUCTS:/i);
+
+  if (parts.length < 2) {
+    return { explanation: aiExplanation.trim(), products: [] };
+  }
+
+  const explanation = parts[0].replace(/EXPLANATION:/i, "").trim();
+  const productsText = parts[1].trim();
+
+  // Parse products using regex
+  const productRegex =
+    /(\d+)\.\s+(.*?)\s+-\s+Relevance Score:\s+(\d+)\s+-\s+(.*?)(?=\n\d+\.|$)/gs;
+  const products = [];
+  let match;
+
+  while ((match = productRegex.exec(productsText)) !== null) {
+    products.push({
+      number: match[1],
+      name: match[2].trim(),
+      relevanceScore: Number.parseInt(match[3]),
+      description: match[4].trim(),
+    });
+  }
+
+  return { explanation, products };
+}
+
+// AI Assistant component
+function AIAssistant({ aiExplanation, fromCache }) {
+  const { explanation, products } = parseAIResponse(aiExplanation);
+
+  return (
+    <div className="mb-8 bg-primary-50 border border-primary-100 rounded-xl overflow-hidden shadow-sm">
+      {/* Header */}
+      <div className="bg-primary-100 px-6 py-4 flex justify-between items-center">
+        <div className="flex items-center">
+          <div className="bg-primary-500 rounded-full p-2 mr-3">
+            <svg
+              className="h-5 w-5 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-800">AI Assistant</h2>
+        </div>
+        {fromCache && (
+          <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-gray-200">
+            Cached Result
+          </span>
+        )}
+      </div>
+
+      {/* Explanation */}
+      <div className="p-6 border-b border-primary-100">
+        <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">
+          EXPLANATION:
+        </h3>
+        <p className="text-gray-700 whitespace-pre-line leading-relaxed">
+          {explanation}
+        </p>
+      </div>
+
+      {/* Products */}
+      {products.length > 0 && (
+        <div className="p-6">
+          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">
+            PRODUCTS:
+          </h3>
+          <div className="space-y-4">
+            {products.map((product, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200"
+              >
+                <div className="flex items-start justify-between">
+                  <h4 className="text-lg font-medium text-gray-900">
+                    {product.number}. {product.name}
+                  </h4>
+                  <div className="ml-2 flex-shrink-0">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Score: {product.relevanceScore}
+                    </span>
+                  </div>
+                </div>
+                <p className="mt-2 text-gray-600">{product.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AppContent() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -20,7 +130,10 @@ function App() {
   const [filterOptions, setFilterOptions] = useState(null);
   const [filteredProducts, setFilteredProducts] = useState([]);
 
-  // Add this useEffect to apply sorting and filtering whenever relevant state changes
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const { currentUser, loading: authLoading, logout, apiWithAuth } = useAuth();
+
+  // Apply sorting and filtering
   useEffect(() => {
     if (!products || products.length === 0) {
       setFilteredProducts([]);
@@ -79,7 +192,7 @@ function App() {
     console.log("Applied sorting/filtering - products count:", result.length);
   }, [products, sortOption, filterOptions]);
 
-  // Add these handler functions
+  // Handler functions
   const handleSort = (option) => {
     setSortOption(option);
   };
@@ -103,29 +216,42 @@ function App() {
         }
       : { min: 0, max: 1000 };
 
+  // Fetch search history when user changes
   useEffect(() => {
-    // Only fetch search history on initial load
-    fetch(`${config.API_URL}/session`, {
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setSearchHistory(data.searchHistory || []);
-      })
-      .catch((err) => console.error("Error fetching session:", err));
-  }, []);
+    const fetchSessionData = async () => {
+      try {
+        if (authLoading) return;
+
+        if (!currentUser) {
+          setSearchHistory([]);
+          return;
+        }
+
+        const response = await apiWithAuth(`${config.API_URL}/session`);
+
+        if (response.ok) {
+          const data = await response.json();
+          setSearchHistory(data.searchHistory || []);
+          console.log(
+            "Search history loaded:",
+            data.searchHistory?.length || 0
+          );
+        }
+      } catch (err) {
+        console.error("Error fetching session:", err);
+      }
+    };
+
+    fetchSessionData();
+  }, [currentUser, authLoading, apiWithAuth]);
 
   const handleSearch = async (query) => {
     try {
       setLoading(true);
       setHasSearched(true);
 
-      const response = await fetch(`${config.API_URL}/search`, {
+      const response = await apiWithAuth(`${config.API_URL}/search`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
         body: JSON.stringify({ query }),
       });
 
@@ -134,9 +260,12 @@ function App() {
       const data = await response.json();
       setSearchResponse(data);
       setProducts(data.recommendations || []);
-      if (data.searchHistory) {
+
+      // Only update search history if we got history from server (for logged-in users)
+      if (data.searchHistory && data.searchHistory.length > 0) {
         setSearchHistory(data.searchHistory);
       }
+
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -153,8 +282,45 @@ function App() {
     setSelectedProduct(null);
   };
 
+  const renderUserMenu = () => {
+    if (authLoading) {
+      return <div className="text-gray-500">Loading...</div>;
+    }
+
+    if (currentUser) {
+      return (
+        <div className="flex items-center">
+          <span className="mr-2 text-gray-700">Hello, {currentUser.name}</span>
+          <button
+            onClick={logout}
+            className="text-sm text-primary-600 hover:text-primary-800"
+          >
+            Logout
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <button
+        onClick={() => setShowAuthModal(true)}
+        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+      >
+        Login / Register
+      </button>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <div className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <h1 className="text-xl font-bold text-gray-800">
+            Smart Product Assistant
+          </h1>
+          {renderUserMenu()}
+        </div>
+      </div>
       <HeroSection onSearch={handleSearch} searchHistory={searchHistory} />
 
       {/* Main Content */}
@@ -200,41 +366,10 @@ function App() {
           ) : hasSearched ? (
             <>
               {searchResponse && searchResponse.aiExplanation && (
-                <div className="mb-8 bg-primary-50 border border-primary-200 p-6 rounded-xl">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center">
-                      <div className="bg-primary-500 rounded-full p-2 mr-3">
-                        <svg
-                          className="h-5 w-5 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13 10V3L4 14h7v7l9-11h-7z"
-                          />
-                        </svg>
-                      </div>
-                      <h2 className="text-xl font-semibold text-gray-800">
-                        AI Assistant
-                      </h2>
-                    </div>
-                    {searchResponse.fromCache && (
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                        Cached Result
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-4 pl-10">
-                    <p className="text-gray-700 whitespace-pre-line leading-relaxed">
-                      {searchResponse.aiExplanation}
-                    </p>
-                  </div>
-                </div>
+                <AIAssistant
+                  aiExplanation={searchResponse.aiExplanation}
+                  fromCache={searchResponse.fromCache}
+                />
               )}
 
               {/* Results count */}
@@ -297,7 +432,20 @@ function App() {
           </div>
         </div>
       </footer>
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

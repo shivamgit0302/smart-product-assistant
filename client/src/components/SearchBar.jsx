@@ -37,11 +37,11 @@ function SearchBar({ onSearch }) {
         />
         <button
           type="submit"
-          className="px-6 py-4 bg-[#0096c7] text-white font-medium hover:bg-[#0077b6] focus:outline-none transition-colors"
+          className="px-3 sm:px-6 py-4 bg-[#0096c7] text-white font-medium hover:bg-[#0077b6] focus:outline-none transition-colors whitespace-nowrap"
         >
           <div className="flex items-center">
             <svg
-              className="h-5 w-5 mr-2"
+              className="h-5 w-5 sm:mr-2"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -54,7 +54,7 @@ function SearchBar({ onSearch }) {
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
             </svg>
-            Search
+            <span className="hidden sm:inline">Search</span>
           </div>
         </button>
       </form>

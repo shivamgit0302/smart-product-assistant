@@ -2,11 +2,12 @@ import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
-import session from "express-session";
+import cookieParser from "cookie-parser";
 import productsRoutes from "./routes/products.js";
 import searchRoutes from "./routes/search.js";
 import sessionRoutes from "./routes/session.js";
-
+import authRoutes from "./routes/auth.js";
+import { authenticate, saveSession } from "./middleware/auth.js";
 dotenv.config();
 
 const app = express();
@@ -17,7 +18,7 @@ app.use(
     origin:
       process.env.NODE_ENV === "production"
         ? [
-            "https://frontend-smart-product-assistant.vercel.app", // Update this with your actual frontend URL after deployment
+            "https://frontend-smart-product-assistant.vercel.app",
             "https://www.frontend-smart-product-assistant.vercel.app",
           ]
         : "http://localhost:3000",
@@ -25,21 +26,15 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(cookieParser());
 
-// Session configuration
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "smart-product-assistant-secret",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    },
-  })
-);
+// Apply authentication middleware
+app.use(authenticate);
 
+// Apply session saving middleware
+app.use(saveSession);
 // Routes
+app.use("/api/auth", authRoutes);
 app.use("/api/products", productsRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/session", sessionRoutes);
