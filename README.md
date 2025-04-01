@@ -65,17 +65,15 @@ A brief introduction to your Smart Product Assistant, explaining its purpose, co
    The frontend will be available at http://localhost:3000
    The backend API will be available at http://localhost:5000
 
-## API Documentation
+## API Structure
 
-### Authentication Endpoints
-- POST `/api/auth/register` - Create a new user account
-- POST `/api/auth/login` - Log in and receive a JWT token
-- GET `/api/auth/me` - Get current user profile
-- POST `/api/auth/logout` - Log out current user
+The application uses RESTful APIs with the following structure:
 
-### Search Endpoints
-- POST `/api/search` - Perform AI-enhanced product search
-- GET `/api/session` - Get current user's search history
+- Authentication: Handles user registration, login, and session management
+- Search: Processes natural language queries and returns product recommendations
+- Products: Manages the product catalog
+
+For security reasons, detailed API specifications are available upon request and not published in this public repository.
 
 ## LLM Integration Approach
 
