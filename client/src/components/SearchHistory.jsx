@@ -6,10 +6,10 @@ function SearchHistory({ history, onSearchAgain }) {
   }
 
   return (
-    <div className="max-w-2xl mx-auto mt-6 bg-white/80 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-primary-100">
-      <h3 className="text-sm font-medium text-gray-600 mb-3 flex items-center">
+    <div className="max-w-2xl mx-auto mt-6 bg-white/10 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-white/20">
+      <h3 className="text-sm font-medium text-white mb-3 flex items-center">
         <svg
-          className="h-4 w-4 mr-1 text-primary-500"
+          className="h-4 w-4 mr-1 text-blue-200"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -24,25 +24,25 @@ function SearchHistory({ history, onSearchAgain }) {
         </svg>
         Recent Searches
       </h3>
-      <ul className="divide-y divide-gray-100">
+      <ul className="divide-y divide-white/10">
         {history.slice(0, 5).map((item, index) => (
           <li
             key={index}
-            className="py-2 flex justify-between items-center hover:bg-primary-50 rounded px-3 cursor-pointer transition-colors group"
+            className="py-2 flex justify-between items-center hover:bg-white/10 rounded px-3 cursor-pointer transition-colors group"
             onClick={() => onSearchAgain(item.query)}
           >
-            <span className="text-primary-600 group-hover:text-primary-700 font-medium">
+            <span className="text-blue-50 group-hover:text-white font-medium">
               {item.query}
             </span>
             <div className="flex items-center">
-              <span className="text-xs text-gray-500 mr-2">
+              <span className="text-xs text-blue-200 mr-2">
                 {new Date(item.timestamp).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
               </span>
               <svg
-                className="h-4 w-4 text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-4 w-4 text-blue-200 opacity-0 group-hover:opacity-100 transition-opacity"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"

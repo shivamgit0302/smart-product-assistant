@@ -100,7 +100,6 @@ module.exports = {
           "sans-serif",
         ],
         display: [
-          '"Clash Display"',
           '"Inter"',
           "system-ui",
           "-apple-system",

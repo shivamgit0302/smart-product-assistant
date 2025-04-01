@@ -11,6 +11,7 @@ import { useAuth } from "./contexts/AuthContext";
 import AuthModal from "./components/AuthModal";
 import { AuthProvider } from "./contexts/AuthContext";
 import MetaTags from "./components/MetaTags";
+import Header from "./components/Header";
 // Helper function to parse AI response
 function parseAIResponse(aiExplanation) {
   if (!aiExplanation) return { explanation: "", products: [] };
@@ -308,14 +309,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-800">
-            Smart Product Assistant
-          </h1>
-          {renderUserMenu()}
-        </div>
-      </div>
+      <Header onShowAuthModal={() => setShowAuthModal(true)} />
       <HeroSection onSearch={handleSearch} searchHistory={searchHistory} />
 
       {/* Main Content */}
@@ -411,9 +405,9 @@ function AppContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="flex flex-col md:flex-row justify-center items-center">
             <div className="mb-6 md:mb-0 text-center">
-              <h2 className="text-xl font-bold text-gray-800">
+              <h1 className="font-sans text-xl font-medium bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
                 Smart Product Assistant
-              </h2>
+              </h1>
               <p className="text-gray-600 mt-2">
                 Using AI to help you find exactly what you're looking for.
               </p>

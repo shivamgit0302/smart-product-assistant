@@ -16,6 +16,7 @@ function SearchBar({ onSearch }) {
     "noise-cancelling headphones",
     "waterproof hiking boots",
   ]);
+  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef(null);
   const MAX_QUERY_LENGTH = 150;
 
@@ -64,15 +65,21 @@ function SearchBar({ onSearch }) {
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      <form onSubmit={handleSubmit}>
-        <div className="relative flex rounded-full overflow-hidden shadow-lg">
+      <form onSubmit={handleSubmit} className="relative">
+        <div
+          className={`relative flex rounded-full overflow-hidden shadow-lg transition-all duration-200 ${
+            isFocused ? "shadow-blue-400/30 ring-2 ring-white/50" : ""
+          }`}
+        >
           <input
             ref={inputRef}
             type="text"
-            placeholder="What are you looking for? (e.g., 'lightweight laptop for college')"
+            placeholder="What are you looking for?"
             value={query}
             onChange={handleQueryChange}
-            className={`flex-1 px-5 py-4 text-gray-700 bg-white border-none focus:outline-none text-lg ${
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            className={`flex-1 px-5 py-4 text-gray-700 bg-white/90 backdrop-blur-sm border-none focus:outline-none text-lg ${
               error ? "border-red-500 bg-red-50" : ""
             }`}
             aria-label="Search products"
@@ -80,7 +87,7 @@ function SearchBar({ onSearch }) {
           />
           <button
             type="submit"
-            className="px-3 sm:px-6 py-4 bg-[#0096c7] text-white font-medium hover:bg-[#0077b6] focus:outline-none transition-colors whitespace-nowrap disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="px-5 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium hover:from-blue-700 hover:to-cyan-700 focus:outline-none transition-all duration-200 whitespace-nowrap disabled:opacity-70 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-500"
             disabled={query.trim().length === 0}
           >
             <div className="flex items-center">
@@ -105,7 +112,7 @@ function SearchBar({ onSearch }) {
 
         {/* Error message */}
         {error && (
-          <div className="mt-2 text-amber-200 text-sm bg-red-900/30 p-2 rounded">
+          <div className="mt-3 text-white text-sm bg-red-500/80 backdrop-blur-sm p-3 rounded-lg shadow-lg">
             <span className="font-medium">⚠️ </span>
             {error}
           </div>
@@ -133,7 +140,7 @@ function SearchBar({ onSearch }) {
               setError("");
               onSearch(suggestion);
             }}
-            className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full text-sm text-white transition-colors duration-200"
+            className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-full text-sm text-white transition-all duration-200 shadow-sm hover:shadow backdrop-blur-sm border border-white/10"
           >
             {suggestion}
           </button>
