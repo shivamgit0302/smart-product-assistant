@@ -38,7 +38,7 @@ function EmptyState() {
           <ul className="text-left space-y-2">
             {[
               "Save your search history",
-              "Get faster results with cached searches",
+              "Get faster results",
               "Track your favorite products",
             ].map((benefit, index) => (
               <li key={index} className="flex items-start">

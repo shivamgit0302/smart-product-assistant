@@ -79,7 +79,7 @@ function SearchBar({ onSearch }) {
             onChange={handleQueryChange}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            className={`flex-1 px-5 py-4 text-gray-700 bg-white/90 backdrop-blur-sm border-none focus:outline-none text-lg ${
+            className={`flex-1 px-5 py-4 text-gray-700 bg-white/90 border-none focus:outline-none text-lg ${
               error ? "border-red-500 bg-red-50" : ""
             }`}
             aria-label="Search products"
@@ -112,7 +112,7 @@ function SearchBar({ onSearch }) {
 
         {/* Error message */}
         {error && (
-          <div className="mt-3 text-white text-sm bg-red-500/80 backdrop-blur-sm p-3 rounded-lg shadow-lg">
+          <div className="mt-3 text-white text-sm bg-red-500/80 p-3 rounded-lg shadow-lg">
             <span className="font-medium">⚠️ </span>
             {error}
           </div>
@@ -140,7 +140,7 @@ function SearchBar({ onSearch }) {
               setError("");
               onSearch(suggestion);
             }}
-            className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-full text-sm text-white transition-all duration-200 shadow-sm hover:shadow backdrop-blur-sm border border-white/10"
+            className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-full text-sm text-white transition-all duration-200 shadow-sm hover:shadow border border-white/10"
           >
             {suggestion}
           </button>
