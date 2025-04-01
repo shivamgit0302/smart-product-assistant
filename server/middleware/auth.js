@@ -24,7 +24,6 @@ export const authenticate = async (req, res, next) => {
   req.session = { searchHistory: [], searchCache: {} };
 
   if (!token) {
-    console.log("No authentication token - anonymous user");
     return next();
   }
 
@@ -36,7 +35,6 @@ export const authenticate = async (req, res, next) => {
       // Authenticated user - load from database
       const user = await User.findById(decoded.userId);
       if (user) {
-        console.log("User authenticated:", user.name);
         req.user = user;
         req.session = {
           userId: user._id,
@@ -105,7 +103,6 @@ export const updateUserSearchCache = async (userId, query, cacheData) => {
       { new: true }
     );
 
-    console.log(`Search cache updated for query: ${query}`);
     return !!result;
   } catch (error) {
     console.error(`Failed to update search cache: ${error.message}`);

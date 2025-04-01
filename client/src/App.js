@@ -10,7 +10,7 @@ import config from "./config";
 import { useAuth } from "./contexts/AuthContext";
 import AuthModal from "./components/AuthModal";
 import { AuthProvider } from "./contexts/AuthContext";
-
+import MetaTags from "./components/MetaTags";
 // Helper function to parse AI response
 function parseAIResponse(aiExplanation) {
   if (!aiExplanation) return { explanation: "", products: [] };
@@ -189,7 +189,6 @@ function AppContent() {
     }
 
     setFilteredProducts(result);
-    console.log("Applied sorting/filtering - products count:", result.length);
   }, [products, sortOption, filterOptions]);
 
   // Handler functions
@@ -232,10 +231,6 @@ function AppContent() {
         if (response.ok) {
           const data = await response.json();
           setSearchHistory(data.searchHistory || []);
-          console.log(
-            "Search history loaded:",
-            data.searchHistory?.length || 0
-          );
         }
       } catch (err) {
         console.error("Error fetching session:", err);
@@ -444,6 +439,7 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
+      <MetaTags />
       <AppContent />
     </AuthProvider>
   );

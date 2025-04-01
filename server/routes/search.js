@@ -206,12 +206,83 @@ async function retryWithBackoff(apiCallFn, maxRetries = MAX_RETRIES) {
   }
 }
 
+// List of terms that might indicate inappropriate content
+const INAPPROPRIATE_TERMS = [
+  // Violence
+  "kill",
+  "murder",
+  "attack",
+  "bomb",
+  "weapon",
+  "gun",
+  "shoot",
+  "assault",
+
+  // Hate speech
+  "nazi",
+  "racist",
+  "terrorism",
+  "terrorist",
+  "hate",
+  "racial slur",
+
+  // Adult content indicators
+  "porn",
+  "xxx",
+  "sex",
+  "nude",
+  "naked",
+
+  // Illegal activities
+  "hack",
+  "steal",
+  "illegal drug",
+  "cocaine",
+  "heroin",
+];
+
+// Server-side content moderation
+function moderateServerContent(query) {
+  if (!query || typeof query !== "string") {
+    return {
+      isAppropriate: false,
+      message: "Invalid search query",
+    };
+  }
+
+  const queryLower = query.toLowerCase();
+
+  // Check for inappropriate terms
+  for (const term of INAPPROPRIATE_TERMS) {
+    if (queryLower.includes(term)) {
+      return {
+        isAppropriate: false,
+        message: "Search contains inappropriate content",
+      };
+    }
+  }
+
+  return {
+    isAppropriate: true,
+    message: "",
+  };
+}
+
 // Natural language search endpoint
 router.post("/", async (req, res) => {
   try {
     const { query } = req.body;
     if (!query) {
       return res.status(400).json({ message: "Search query is required" });
+    }
+
+    // Server-side content moderation
+    const moderationResult = moderateServerContent(query);
+    if (!moderationResult.isAppropriate) {
+      return res.status(400).json({
+        message: "Your search could not be processed",
+        error: moderationResult.message,
+      });
     }
 
     const currentTime = Date.now();
@@ -228,20 +299,7 @@ router.post("/", async (req, res) => {
         cachedResult = freshUser.searchCache && freshUser.searchCache[query];
 
         if (cachedResult) {
-          console.log(`Found cached result for query "${query}"`);
-          console.log(
-            `Cache timestamp: ${new Date(cachedResult.timestamp).toISOString()}`
-          );
-          console.log(`Current time: ${new Date(currentTime).toISOString()}`);
-          console.log(
-            `Cache age: ${
-              (currentTime - cachedResult.timestamp) / 1000
-            } seconds`
-          );
-
           if (currentTime - cachedResult.timestamp < CACHE_TTL) {
-            console.log("Cache is fresh, using cached results");
-
             // Update search history
             updateSearchHistory(
               req,
@@ -256,23 +314,14 @@ router.post("/", async (req, res) => {
               searchHistory: req.session.searchHistory || [],
               fromCache: true,
             });
-          } else {
-            console.log("Cache is stale, fetching fresh results");
           }
-        } else {
-          console.log(`No cache found for query "${query}"`);
         }
       }
-    } else {
-      console.log("User not logged in, skipping cache check");
     }
 
     // If we get here, we need to perform a new search
-    console.log("Performing new search with OpenAI");
-
     // Check if we're approaching rate limits
     if (isRateLimitApproaching()) {
-      console.log("Approaching rate limits, using fallback search");
       const products = await Product.find();
       const { recommendedProducts, explanation } = fallbackSearch(
         query,
@@ -314,7 +363,6 @@ router.post("/", async (req, res) => {
       productData
     )}`;
     const estimatedTokens = approximateTokenCount(requestContent);
-    console.log(`Estimated token usage: ${estimatedTokens}`);
 
     // Check if we need to further optimize token usage
     const simplifiedProductData =
@@ -370,7 +418,6 @@ router.post("/", async (req, res) => {
       } catch (initialError) {
         // Check if it's a rate limit error
         if (initialError.status === 429) {
-          console.log("Rate limit exceeded, implementing exponential backoff");
           completion = await retryWithBackoff(makeOpenAIRequest);
         } else {
           throw initialError;
@@ -454,8 +501,6 @@ router.post("/", async (req, res) => {
       if (openaiError.status === 403) errorType = "authentication";
       if (openaiError.status === 400) errorType = "invalid_request";
 
-      console.log(`Error type: ${errorType}, falling back to keyword search`);
-
       // Fallback to keyword-based search
       const { recommendedProducts, explanation } = fallbackSearch(
         query,
@@ -531,10 +576,6 @@ function updateSearchHistory(req, query, numResults) {
   if (req.session.searchHistory.length > 10) {
     req.session.searchHistory = req.session.searchHistory.slice(0, 10);
   }
-
-  console.log(
-    `Search history updated in memory, length: ${req.session.searchHistory.length}`
-  );
 }
 
 export default router;

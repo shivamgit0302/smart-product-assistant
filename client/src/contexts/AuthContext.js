@@ -63,11 +63,6 @@ export function AuthProvider({ children }) {
         const timeUntilRefresh = expiryTime - currentTime - 60 * 60 * 1000; // Refresh 1 hour before expiry
 
         if (timeUntilRefresh > 0) {
-          console.log(
-            `Setting token refresh in ${Math.floor(
-              timeUntilRefresh / 1000 / 60
-            )} minutes`
-          );
           const timer = setTimeout(() => refreshToken(), timeUntilRefresh);
           setTokenRefreshTimer(timer);
         } else {
@@ -111,7 +106,6 @@ export function AuthProvider({ children }) {
 
       const token = localStorage.getItem("token");
       if (!token) {
-        console.log("No token found in localStorage");
         setCurrentUser(null);
         setLoading(false);
         return;
@@ -121,7 +115,6 @@ export function AuthProvider({ children }) {
         Authorization: `Bearer ${token}`,
       };
 
-      console.log("Fetching user data with token");
       const response = await fetch(`${config.API_URL}/auth/me`, {
         headers,
         credentials: "include",
@@ -129,7 +122,6 @@ export function AuthProvider({ children }) {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("User data fetched successfully:", data.user);
         setCurrentUser(data.user);
 
         // Set up token refresh
@@ -139,7 +131,6 @@ export function AuthProvider({ children }) {
 
         // Only clear token on auth errors
         if (response.status === 401) {
-          console.log("Unauthorized - clearing token");
           localStorage.removeItem("token");
           setCurrentUser(null);
         }
